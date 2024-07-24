@@ -1,12 +1,15 @@
-import { USER_POSTS_PAGE } from "../routes.js";
 import { renderHeaderComponent } from "./header-component.js";
-import { posts, goToPage, user } from "../index.js";
+import { goToPage, user } from "../index.js";
 import { likePost, unlikePost } from "../api.js";
 
-export function renderPostsPageComponent({ appEl }) {
-  console.log("Актуальный список постов:", posts);
 
-  const appHtml = `
+export const renderUserPostsPageComponent = ({ appEl, posts }) => {
+  if (!Array.isArray(posts)) {
+    console.error("Posts is not an array or undefined:", posts);
+    posts = [];
+  }
+
+  appEl.innerHTML = `
     <div class="page-container">
       <div class="header-container"></div>
       <ul class="posts">
@@ -32,26 +35,16 @@ export function renderPostsPageComponent({ appEl }) {
               ${post.description}
             </p>
             <p class="post-date">
-               ${dateFns.formatDistanceToNow(new Date(post.createdAt), { addSuffix: true, locale: dateFns.locale.ru })}
+            ${dateFns.formatDistanceToNow(new Date(post.createdAt), { addSuffix: true, locale: dateFns.locale.ru })}
             </p>
           </li>
         `).join('')}
       </ul>
     </div>`;
 
-  appEl.innerHTML = appHtml;
-
   renderHeaderComponent({
     element: document.querySelector(".header-container"),
   });
-
-  for (let userEl of document.querySelectorAll(".post-header")) {
-    userEl.addEventListener("click", () => {
-      goToPage(USER_POSTS_PAGE, {
-        userId: userEl.dataset.userId,
-      });
-    });
-  }
 
   for (let likeButton of document.querySelectorAll(".like-button")) {
     likeButton.addEventListener("click", () => {
@@ -64,7 +57,7 @@ export function renderPostsPageComponent({ appEl }) {
           // Обновляем локально список постов после успешного отзыва лайка
           post.isLiked = false;
           post.likes = post.likes.filter(like => like.id !== user.id);
-          renderPostsPageComponent({ appEl });
+          renderUserPostsPageComponent({ appEl, posts }); // Обновляем текущую страницу
         }).catch(error => {
           console.error("Ошибка отзыва лайка:", error);
           alert("Ошибка отзыва лайка: " + error.message);
@@ -74,7 +67,7 @@ export function renderPostsPageComponent({ appEl }) {
           // Обновляем локально список постов после успешного лайка
           post.isLiked = true;
           post.likes.push({ id: user.id, name: user.name });
-          renderPostsPageComponent({ appEl });
+          renderUserPostsPageComponent({ appEl, posts }); // Обновляем текущую страницу
         }).catch(error => {
           console.error("Ошибка лайка:", error);
           alert("Ошибка лайка: " + error.message);
@@ -82,7 +75,7 @@ export function renderPostsPageComponent({ appEl }) {
       }
     });
   }
-}
+};
 
 const getToken = () => {
   const token = user ? `Bearer ${user.token}` : undefined;
